@@ -1,0 +1,310 @@
+html,body {
+    height: 100%;
+}
+
+#app{
+    height: 100%;
+}
+
+.border {
+    border: 1px solid black;
+}
+
+.border-red {
+    border: 1px solid rgb(255, 0, 0);
+}
+
+.full-height {
+    height: 100% !important;
+}
+
+.full-width {
+    width: 100% !important;
+}
+
+.no-padding {
+    padding: 0px !important;
+}
+
+.fixed {
+    position: fixed !important;
+}
+
+.z-index-5 {
+    z-index: 5 !important;
+}
+
+.scrollbar {
+    overflow-y: scroll;
+}
+
+.scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.chat-card {
+    padding: 0px;
+}
+
+.app {
+    height: 100%;
+}
+
+.connection-banner{
+    height: 1rem;
+    background-color: crimson;
+}
+
+.connected {
+    background-color: #41B883 !important;
+}
+
+
+.content {
+    padding: 0rem 1rem 0rem 1rem;
+    height: 95%;
+    position: relative;
+}
+
+.flex-content {
+    display: flex;
+}
+
+.contact-container {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 0.7rem;
+    border-bottom: 1px solid #f8f8f8;
+}
+
+.contact-container:hover {
+    background: #f8f8f8;
+}
+
+.contact-avatar {
+    width: 20%;
+}
+
+.contact-avatar img {
+    width: 80%;
+    border-radius: 50%;
+}
+
+@media screen and (max-width: 300px) {
+    .contact-avatar {
+        display: none;
+    }
+}
+
+.contact-info {
+    margin-left: 5%;
+    max-width: 70%;
+}
+
+.chat-container {
+    width: 75%;
+    max-height: 100%;
+}
+
+.chat-banner {
+    height: 10%;
+    background: #f8f8f8;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 0.7rem;
+}
+
+.chat-banner > .contact-avatar {
+    display: flex;
+    align-items: center;
+    height: 90%;
+    width: auto;
+}
+
+.chat-banner > .contact-avatar img {
+    height: 90%;
+    width: auto;
+    object-fit: cover;
+}
+
+.chat-banner > .contact-info {
+    margin-left: 2%;
+}
+
+.chat-banner > .contact-info>.contact-status {
+    font-size: smaller;
+}
+
+.contanct-list-container-holder {
+    position: relative;
+    width: 25%;
+}
+
+.messages-container {
+    height: 90%;
+}
+
+/*
+.messages-container.mobile-view > div > ul > li > div{
+    margin: 0rem 0.5rem 0rem 0.5rem !important;
+}
+*/
+
+.messages-display {
+    height: 90%;
+}
+
+.message-input {
+    display: flex;
+    align-items: center;
+    position: relative;
+    /*box-shadow: 0px -10px 14px 0px rgb(0 0 0 / 16%)*/
+}
+
+.message-input > input {
+    border: none;
+}
+
+/*
+.message-input > input:focus{
+    border: 1px solid #39f
+}
+*/
+
+.message-left > .message-container {
+    display: inline-block;
+    position: relative;
+    max-width: 70%;
+    background-color: #34495E;
+    color: #dedede;
+}
+
+.message-text-container{
+    padding: 0.5rem 2rem 0.5rem 1rem;
+    display: flex;
+}
+
+.action-menu-container {
+    position: absolute;
+    right: 0.5rem;
+    top: 0.1rem;
+}
+
+.message-left {
+    display: flex;
+    align-items: center;
+}
+
+.message-right {
+    display: flex;
+    align-items: center;
+    flex-direction: row-reverse;
+}
+
+.message-right > .message-container {
+    display: inline-block;
+    position: relative;
+    max-width: 70%;
+    background-color: #41B883;
+    color: rgb(255 255 255 / 90%);
+}
+
+/*
+.message-text {
+max-width: 92%;
+}
+*/
+
+.message-info {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    font-size: smaller;
+    margin-left: 0.5rem;
+}
+
+.send-icon:hover {
+    cursor: pointer;
+    color: #39f;
+}
+
+.relative {
+    position: relative;
+}
+
+.right {
+    float: right;
+}
+
+.new-btn-container {
+    display: flex;
+    position: absolute;
+    bottom: 5%;
+    right: 5%;
+}
+
+.action-list-drop {
+    width: auto;
+}
+
+.action-list-container {
+    display: inline-block;
+    color: #666;
+    background: #f8f8f8;
+}
+
+.action-list {
+    margin: 0px;
+}
+
+.action-item {
+    margin-top: 0px !important;
+    padding: 0.2rem 1rem 0.2rem 0.5rem;
+}
+
+.action-item:hover {
+    cursor: pointer;
+    background: rgb(223, 223, 223);
+}
+
+.contact-ul>li {
+    margin-top: 0px !important;
+}
+
+.message-has-img {
+    max-width: 55% !important;
+}
+
+.message-img-container > img{
+    width: 100%;
+    max-width: 100%;
+}
+
+.sign-in-form, .sign-up-form{
+    width: 100%;
+}
+
+.message-like-container {
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+}
+
+.message-like {
+    color: #34495E;
+}
+
+.message-like > .uk-icon[uk-icon="heart"] svg path {
+    fill: #34495E;
+}
+
+.message-self-like{
+    color:  #41B883;
+}
+
+.message-self-like > .uk-icon[uk-icon="heart"] svg path {
+    fill:  #41B883;
+}
+
+

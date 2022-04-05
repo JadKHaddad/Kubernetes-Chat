@@ -1,0 +1,12 @@
+python_jwt
+gcloud
+sseclient
+pycryptodome
+fastapi
+gunicorn
+uvicorn
+websockets
+redis
+pymongo
+firebase
+requests_toolbelt

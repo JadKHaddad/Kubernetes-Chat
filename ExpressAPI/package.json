@@ -1,0 +1,28 @@
+{
+  "name": "expressapi",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prod_win": "set NODE_ENV=production && node index.js",
+    "prod_nix": "NODE_ENV=production node index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.19.1",
+    "compression": "^1.7.4",
+    "cookie-parser": "^1.4.6",
+    "express": "^4.17.2",
+    "express-ws": "^5.0.2",
+    "firebase": "^9.6.6",
+    "helmet": "^5.0.2",
+    "http": "^0.0.1-security",
+    "mongodb": "^4.3.1",
+    "mongoose": "^6.2.3",
+    "nodemon": "^2.0.15",
+    "redis": "^4.0.3",
+    "ws": "^8.5.0"
+  }
+}

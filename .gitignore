@@ -1,0 +1,8 @@
+**/node_modules
+**/target
+**/Venv
+FirebaseConfig/*.json
+**/database
+**/__pycache__
+**/.vscode
+**/Cargo.lock

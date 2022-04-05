@@ -1,0 +1,7 @@
+{   
+    "redis_host":"host.docker.internal",
+    "redis_port":6379,
+    "mongo_host":"host.docker.internal",
+    "mongo_port":27017,
+    "mongo_db_name":"ChatFastAPI"
+}

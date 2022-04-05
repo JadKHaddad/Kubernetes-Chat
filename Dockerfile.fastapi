@@ -1,0 +1,20 @@
+# docker run --rm -it --network network --name redis redis:latest
+# docker build -t chatfastapi:latest -f Dockerfile.fastapi .
+# docker run --rm -it -p 5000:5000/tcp --network network --add-host=host.docker.internal:host-gateway chatfastapi:latest
+# docker run --rm -it -p 5000:5000/tcp --add-host=host.docker.internal:host-gateway chatfastapi:latest
+
+FROM python:3.8-slim-buster
+
+USER root
+
+COPY FastAPI/requirements.txt /home/requirements.txt
+RUN pip install -r /home/requirements.txt
+
+COPY FastAPI /home/app/
+COPY Config/docker-container-config.json /home/Config/config.json
+COPY FirebaseConfig /home/FirebaseConfig/
+
+WORKDIR /home/app/
+
+EXPOSE 5000
+CMD ["gunicorn", "app.main:app", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:5000"]

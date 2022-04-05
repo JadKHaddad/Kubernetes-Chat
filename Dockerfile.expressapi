@@ -1,0 +1,23 @@
+# docker run --rm -it --network network --name redis redis:latest
+# docker build -t chatexpress:latest -f Dockerfile.expressapi .
+# docker run --rm -it -p 5000:5000/tcp --network network --add-host=host.docker.internal:host-gateway chatexpress:latest
+# docker run --rm -it -p 5000:5000/tcp --add-host=host.docker.internal:host-gateway chatexpress:latest
+
+FROM node:16.13.1
+
+USER root
+
+COPY ExpressAPI/package.json /home/app/package.json
+
+WORKDIR /home/app/
+RUN npm install
+
+COPY ExpressAPI/index.js /home/app/index.js
+COPY ExpressAPI/mods /home/app/mods
+COPY Config/docker-container-config.json /home/Config/config.json
+COPY FirebaseConfig /home/FirebaseConfig/
+
+ARG NODE_ENV=production
+ENV NODE_ENV=${NODE_ENV}
+EXPOSE 5000
+CMD ["node", "index.js"]
