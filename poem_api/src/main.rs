@@ -1,9 +1,12 @@
 use futures_util::{SinkExt, StreamExt};
+use std::sync::Arc;
+use parking_lot::RwLock;
 use poem::{
     get, handler,
     http::StatusCode,
     listener::TcpListener,
-    middleware::CookieJarManager,
+    middleware::{CookieJarManager, AddData},
+    session::{CookieConfig, ServerSession, MemoryStorage, Session},
     web::{
         websocket::{Message, WebSocket},
         Data, Html, Path,
@@ -11,19 +14,36 @@ use poem::{
     EndpointExt, IntoResponse, Request, Response, Result, Route, Server,
 };
 
+#[derive(Clone, Debug)]
+struct st{
+    count: i32,
+}
+
+impl st {
+    pub fn inc(&mut self){
+        self.count += 1;
+    }
+}
+
 #[handler]
-async fn hello(req: &Request, auth: Data<&fireauth::FireAuth>) -> Response {
+async fn hello(req: &Request, /*, connection_manager: Data<&ConnectionManager>*/s: Data<&Arc<RwLock<st>>>) -> Response {
     let email = "something@email.com";
     let password = "supersecretji";
     let return_secure_token = true;
 
-    match auth
-        .sign_in_email(email, password, return_secure_token)
-        .await
-    {
-        Ok(response) => println!("{:?}", response),
-        Err(error) => println!("{:?}", error),
-    }
+
+    let mut w = s.write();
+    w.count = w.count + 1;
+    println!("{}", w.count);
+
+    //println!("connection manager: {}", connection_manager.name());
+    // match auth
+    //     .sign_in_email(email, password, return_secure_token)
+    //     .await
+    // {
+    //     Ok(response) => println!("{:?}", response),
+    //     Err(error) => println!("{:?}", error),
+    // }
     let cookie_value: Option<String> = match req.cookie().get("cookie") {
         Some(cookie) => Some(String::from(cookie.value_str())),
         None => None,
@@ -96,11 +116,12 @@ fn index() -> Html<&'static str> {
 fn ws(
     //Path(name): Path<String>,
     ws: WebSocket,
-    req: &Request, //sender: Data<&tokio::sync::broadcast::Sender<String>>,
+    req: &Request, 
+    //sender: Data<&tokio::sync::broadcast::Sender<String>>,
 ) -> impl IntoResponse {
     //let sender = sender.clone();
     //let mut receiver = sender.subscribe();
-    println!("{:?}", req);
+
     ws.on_upgrade(move |socket| async move {
         let (mut sink, mut stream) = socket.split();
 
@@ -133,9 +154,14 @@ fn ws(
     })
 }
 
+
+
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
     let auth = fireauth::FireAuth::new(String::from("APIKEY"));
+
+
+    let s = Arc::new(RwLock::new(st{count: 0}));
 
     if std::env::var_os("RUST_LOG").is_none() {
         std::env::set_var("RUST_LOG", "poem=debug");
@@ -149,8 +175,8 @@ async fn main() -> Result<(), std::io::Error> {
             get(ws), //.data(tokio::sync::broadcast::channel::<String>(32).0)),
         )
         .at("/hello", get(hello))
-        .with(CookieJarManager::new())
-        .data(auth);
+        .with(CookieJarManager::new()).data(s);
+
 
     Server::new(TcpListener::bind("127.0.0.1:5000"))
         .run(app)
