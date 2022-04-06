@@ -1,5 +1,10 @@
 use futures_util::{SinkExt, StreamExt};
 use parking_lot::RwLock;
+use mongodb::{
+    bson::{doc, Document},
+    Client, Collection,
+};
+use std::time::{SystemTime, UNIX_EPOCH};
 use poem::{
     get, handler,
     http::StatusCode,
@@ -15,7 +20,8 @@ use poem::{
 use std::sync::Arc;
 mod file_reader;
 mod connection_manager;
-
+mod models;
+use models::mongodb_models;
 use connection_manager::ConnectionManager;
 
 #[derive(Clone, Debug)]
@@ -32,7 +38,7 @@ impl st {
 #[handler]
 async fn hello(
     req: &Request,
-    s: Data<&Arc<RwLock<st>>>,
+    s: Data<&Arc<RwLock<ConnectionManager>>>,
     auth: Data<&fireauth::FireAuth>,
 ) -> Response {
     let email = "something@email.com";
@@ -64,9 +70,9 @@ async fn hello(
         .header("content-security-policy", "default-src 'self';base-uri 'self';block-all-mixed-content;font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests")
         .status(StatusCode::OK);
 
-    let mut w = s.write();
-    w.count = w.count + 1;
-    println!("{}", w.count);
+    //let mut w = s.write();
+    //w.count = w.count + 1;
+    //println!("{}", w.count);
 
     return builder.body("ok");
 }
@@ -163,18 +169,42 @@ fn ws(
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
-    let config = file_reader::get_config();
-    let connection_manager = ConnectionManager::new(config.redis_host, config.redis_port);
-    println!("{:?}", connection_manager);
-    let firebase_config = file_reader::get_firebase_config();
-    let auth = fireauth::FireAuth::new(firebase_config.api_key);
-
-    let s = Arc::new(RwLock::new(st { count: 0 }));
-
     if std::env::var_os("RUST_LOG").is_none() {
         std::env::set_var("RUST_LOG", "poem=debug");
     }
     tracing_subscriber::fmt::init();
+
+
+    let config = file_reader::get_config();
+    let connection_manager = ConnectionManager::new(config.redis_host, config.redis_port);
+    let connection_manager = Arc::new(RwLock::new(connection_manager));
+    println!("{:?}", connection_manager);
+    let firebase_config = file_reader::get_firebase_config();
+    let auth = fireauth::FireAuth::new(firebase_config.api_key);
+
+
+    let mongodb = Client::with_uri_str(format!("mongodb://{}:{}", config.mongo_host, config.mongo_port).as_str())
+        .await
+        .unwrap()
+        .database(config.mongo_db_name.as_str());
+    let users_collection = mongodb.collection::<Document>("Users");
+
+
+
+    let result = users_collection
+    .insert_one(
+        doc! {
+            "email": "sadasd",
+            "username": "asd",
+            "signupTimeStamp": SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros().to_string(),
+            "contacts": [],
+            "subscribers": [],
+        },
+        None,
+    )
+    .await
+    .unwrap();
+
 
     let app = Route::new()
         .at("/", get(index))
@@ -184,8 +214,9 @@ async fn main() -> Result<(), std::io::Error> {
         )
         .at("/hello", get(hello))
         .with(CookieJarManager::new())
-        .data(s)
-        .data(auth);
+        .data(connection_manager)
+        .data(auth)
+        .data(users_collection);
 
     Server::new(TcpListener::bind("127.0.0.1:5000"))
         .run(app)
