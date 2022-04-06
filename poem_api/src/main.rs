@@ -70,9 +70,11 @@ async fn hello(
         .header("content-security-policy", "default-src 'self';base-uri 'self';block-all-mixed-content;font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests")
         .status(StatusCode::OK);
 
-    //let mut w = s.write();
-    //w.count = w.count + 1;
-    //println!("{}", w.count);
+
+    let mut w = s.write();
+    println!("{}", w.id);
+    w.id = "123".to_string();
+
 
     return builder.body("ok");
 }
@@ -178,9 +180,13 @@ async fn main() -> Result<(), std::io::Error> {
 
     let config = file_reader::get_config();
     let connection_manager = ConnectionManager::new(config.redis_host, config.redis_port);
-    connection_manager.init();
+    //connection_manager.init();
+
 
     let connection_manager = Arc::new(RwLock::new(connection_manager));
+    let arc_num_clone = Arc::clone(&connection_manager);
+    ConnectionManager::a(arc_num_clone);
+
     let firebase_config = file_reader::get_firebase_config();
     let auth = fireauth::FireAuth::new(firebase_config.api_key);
 
