@@ -1,0 +1,7 @@
+**/node_modules
+**/target
+**/Venv
+**/database
+**/__pycache__
+**/.vscode
+**/Cargo.lock
