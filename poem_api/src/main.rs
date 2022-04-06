@@ -1,49 +1,52 @@
 use futures_util::{SinkExt, StreamExt};
-use std::sync::Arc;
 use parking_lot::RwLock;
 use poem::{
     get, handler,
     http::StatusCode,
     listener::TcpListener,
-    middleware::{CookieJarManager, AddData},
-    session::{CookieConfig, ServerSession, MemoryStorage, Session},
+    middleware::{AddData, CookieJarManager},
+    session::{CookieConfig, MemoryStorage, ServerSession, Session},
     web::{
         websocket::{Message, WebSocket},
         Data, Html, Path,
     },
     EndpointExt, IntoResponse, Request, Response, Result, Route, Server,
 };
+use std::sync::Arc;
+mod file_reader;
+mod connection_manager;
+
+use connection_manager::ConnectionManager;
 
 #[derive(Clone, Debug)]
-struct st{
+struct st {
     count: i32,
 }
 
 impl st {
-    pub fn inc(&mut self){
+    pub fn inc(&mut self) {
         self.count += 1;
     }
 }
 
 #[handler]
-async fn hello(req: &Request, /*, connection_manager: Data<&ConnectionManager>*/s: Data<&Arc<RwLock<st>>>) -> Response {
+async fn hello(
+    req: &Request,
+    s: Data<&Arc<RwLock<st>>>,
+    auth: Data<&fireauth::FireAuth>,
+) -> Response {
     let email = "something@email.com";
     let password = "supersecretji";
     let return_secure_token = true;
 
 
-    let mut w = s.write();
-    w.count = w.count + 1;
-    println!("{}", w.count);
 
-    //println!("connection manager: {}", connection_manager.name());
-    // match auth
-    //     .sign_in_email(email, password, return_secure_token)
-    //     .await
-    // {
-    //     Ok(response) => println!("{:?}", response),
-    //     Err(error) => println!("{:?}", error),
-    // }
+    match auth
+        .sign_in_email(email, password, return_secure_token).await
+    {
+        Ok(response) => println!("{:?}", response),
+        Err(error) => println!("{:?}", error),
+    }
     let cookie_value: Option<String> = match req.cookie().get("cookie") {
         Some(cookie) => Some(String::from(cookie.value_str())),
         None => None,
@@ -60,6 +63,10 @@ async fn hello(req: &Request, /*, connection_manager: Data<&ConnectionManager>*/
         .header("Set-Cookie", "cookie=wassap; SameSite=lax")
         .header("content-security-policy", "default-src 'self';base-uri 'self';block-all-mixed-content;font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests")
         .status(StatusCode::OK);
+
+    let mut w = s.write();
+    w.count = w.count + 1;
+    println!("{}", w.count);
 
     return builder.body("ok");
 }
@@ -116,7 +123,7 @@ fn index() -> Html<&'static str> {
 fn ws(
     //Path(name): Path<String>,
     ws: WebSocket,
-    req: &Request, 
+    req: &Request,
     //sender: Data<&tokio::sync::broadcast::Sender<String>>,
 ) -> impl IntoResponse {
     //let sender = sender.clone();
@@ -154,14 +161,15 @@ fn ws(
     })
 }
 
-
-
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
-    let auth = fireauth::FireAuth::new(String::from("APIKEY"));
+    let config = file_reader::get_config();
+    let connection_manager = ConnectionManager::new(config.redis_host, config.redis_port);
+    println!("{:?}", connection_manager);
+    let firebase_config = file_reader::get_firebase_config();
+    let auth = fireauth::FireAuth::new(firebase_config.api_key);
 
-
-    let s = Arc::new(RwLock::new(st{count: 0}));
+    let s = Arc::new(RwLock::new(st { count: 0 }));
 
     if std::env::var_os("RUST_LOG").is_none() {
         std::env::set_var("RUST_LOG", "poem=debug");
@@ -175,8 +183,9 @@ async fn main() -> Result<(), std::io::Error> {
             get(ws), //.data(tokio::sync::broadcast::channel::<String>(32).0)),
         )
         .at("/hello", get(hello))
-        .with(CookieJarManager::new()).data(s);
-
+        .with(CookieJarManager::new())
+        .data(s)
+        .data(auth);
 
     Server::new(TcpListener::bind("127.0.0.1:5000"))
         .run(app)
