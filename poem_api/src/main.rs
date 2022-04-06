@@ -175,10 +175,12 @@ async fn main() -> Result<(), std::io::Error> {
     tracing_subscriber::fmt::init();
 
 
+
     let config = file_reader::get_config();
     let connection_manager = ConnectionManager::new(config.redis_host, config.redis_port);
+    connection_manager.init();
+
     let connection_manager = Arc::new(RwLock::new(connection_manager));
-    println!("{:?}", connection_manager);
     let firebase_config = file_reader::get_firebase_config();
     let auth = fireauth::FireAuth::new(firebase_config.api_key);
 
@@ -191,7 +193,7 @@ async fn main() -> Result<(), std::io::Error> {
 
 
 
-    let result = users_collection
+    /*let result = users_collection
     .insert_one(
         doc! {
             "email": "sadasd",
@@ -204,7 +206,7 @@ async fn main() -> Result<(), std::io::Error> {
     )
     .await
     .unwrap();
-
+    */
 
     let app = Route::new()
         .at("/", get(index))
