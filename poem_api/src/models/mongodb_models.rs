@@ -1,4 +1,14 @@
 use serde::Deserialize;
+use mongodb::{
+    bson::Document,
+    Collection,
+};
+
+#[derive(Clone)]
+pub struct Collections {
+    pub users_collection: Collection<Document>,
+    pub sessions_collection: Collection<Document>
+}
 
 #[derive(Deserialize)]
 struct MongoUser {

@@ -119,6 +119,7 @@ async def signup(request: Request):
     token = None
     message = "username exists"
     request_body = await request.json()
+    # todo: basemodel
     email = request_body.get("email")
     username = request_body.get("username")
     password = request_body.get("password")
@@ -193,7 +194,7 @@ async def signout():
 
 
 @app.post("/isSignedin", response_class=JSONResponse)  # checks a cookie (token)
-async def isSignedin(token: Optional[str] = Cookie(None)):
+async def is_signedin(token: Optional[str] = Cookie(None)):
     username, message = validate_token(token)
     response = JSONResponse(
         content={
