@@ -36,6 +36,21 @@ impl st {
 }
 
 #[handler]
+async fn connection_manager_id(
+    Path(id): Path<String>,
+    connection_manager: Data<&Arc<RwLock<ConnectionManager>>>,
+) -> Response {
+
+    let mut connection_manager = connection_manager.write();
+    connection_manager.id = id;
+
+    let mut builder = Response::builder()
+        .status(StatusCode::OK);
+
+    return builder.body(format!("{}", connection_manager.id));
+}
+
+#[handler]
 async fn hello(
     req: &Request,
     s: Data<&Arc<RwLock<ConnectionManager>>>,
@@ -132,6 +147,7 @@ fn ws(
     //Path(name): Path<String>,
     ws: WebSocket,
     req: &Request,
+    connection_manager: Data<&Arc<RwLock<ConnectionManager>>>
     //sender: Data<&tokio::sync::broadcast::Sender<String>>,
 ) -> impl IntoResponse {
     //let sender = sender.clone();
@@ -183,9 +199,9 @@ async fn main() -> Result<(), std::io::Error> {
     //connection_manager.init();
 
 
-    let connection_manager = Arc::new(RwLock::new(connection_manager));
-    let arc_num_clone = Arc::clone(&connection_manager);
-    ConnectionManager::a(arc_num_clone);
+    //let connection_manager = Arc::new(RwLock::new(connection_manager));
+    // let arc_num_clone = Arc::clone(&connection_manager);
+    // ConnectionManager::a(arc_num_clone);
 
     let firebase_config = file_reader::get_firebase_config();
     let auth = fireauth::FireAuth::new(firebase_config.api_key);
@@ -220,6 +236,7 @@ async fn main() -> Result<(), std::io::Error> {
             "/ws",
             get(ws), //.data(tokio::sync::broadcast::channel::<String>(32).0)),
         )
+        .at("/id/:id", get(connection_manager_id))
         .at("/hello", get(hello))
         .with(CookieJarManager::new())
         .data(connection_manager)
