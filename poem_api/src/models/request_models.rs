@@ -6,3 +6,9 @@ pub struct SignupModel {
     pub password: String,
     pub username: String,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct SigninModel {
+    pub email: String,
+    pub password: String,
+}

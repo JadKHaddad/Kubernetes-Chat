@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use serde::Serialize;
+use crate::models::UserInfo;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SignupModel {
@@ -7,10 +8,12 @@ pub struct SignupModel {
     pub message: String
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SigninModel {
-    success: bool,
-    message: String
+#[derive(Debug, Serialize)]
+pub struct SigninModel <'a>{
+    pub success: bool,
+    pub username: String,
+    pub info: UserInfo<'a>,
+    pub message: String
 }
 
 #[derive(Debug, Serialize, Deserialize)]

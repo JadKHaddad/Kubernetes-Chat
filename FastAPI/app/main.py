@@ -188,6 +188,7 @@ async def signin(request: Request):
 
 @app.post("/signout", response_class=JSONResponse)  # removes a cookie (token)
 async def signout():
+    # delete session
     response = JSONResponse(content={"success": True})
     response.delete_cookie("token")
     return response

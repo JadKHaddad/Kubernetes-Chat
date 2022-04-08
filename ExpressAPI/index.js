@@ -163,6 +163,13 @@ app.post('/signin', async (req, res) => {
 })
 
 
+/*
+app.post('/signout', async (req, res) => {
+  // delete token as session
+})
+*/
+
+
 app.post('/isSignedin', async (req, res) => {
   const token = getCookies(req).token
   const { username, message } = await validateToken(token)
