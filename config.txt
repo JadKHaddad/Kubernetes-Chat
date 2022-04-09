@@ -1,11 +1,13 @@
 run redis as a container 
 docker run --rm -it -p 5002:6379/tcp --network network --name redis redis:latest
+docker run -d -p 6379:6379/tcp --name redis redis:latest
 
 run mongo as a container 
 windows
 docker run --rm -it -p 5001:27017/tcp --network network --name mongo -v ${PWD}/MongoDB/database:/data/db mongo:latest
-
 docker run --rm -it --network network --name mongo -v ${PWD}/MongoDB/database:/data/db mongo:latest
+
+docker run -d -p 27017:27017/tcp --name mongo -v ${PWD}/MongoDB/database:/data/db mongo:latest
 
 
 edit /etc/mongod.conf

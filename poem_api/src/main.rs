@@ -9,9 +9,70 @@ use poem::{
     Server,
 };
 
+use poem::{
+    handler,
+    http::{header, StatusCode},
+    web::{
+        websocket::{Message, WebSocket},
+        Data, Json, Html
+    },
+    IntoResponse, Request, Response,
+};
+
 use crate::connection_manager::ConnectionManager;
 use crate::functions::routing;
 use crate::models::*;
+
+
+#[handler]
+fn index() -> Html<&'static str> {
+    Html(
+        r###"
+    <body>
+        <form id="loginForm">
+            Name: <input id="nameInput" type="text" />
+            <button type="submit">Login</button>
+        </form>
+        
+        <form id="sendForm" hidden>
+            Text: <input id="msgInput" type="text" />
+            <button type="submit">Send</button>
+        </form>
+        
+        <textarea id="msgsArea" cols="50" rows="30" hidden></textarea>
+    </body>
+    <script>
+        let ws;
+        const loginForm = document.querySelector("#loginForm");
+        const sendForm = document.querySelector("#sendForm");
+        const nameInput = document.querySelector("#nameInput");
+        const msgInput = document.querySelector("#msgInput");
+        const msgsArea = document.querySelector("#msgsArea");
+        
+        nameInput.focus();
+        loginForm.addEventListener("submit", function(event) {
+            event.preventDefault();
+            loginForm.hidden = true;
+            sendForm.hidden = false;
+            msgsArea.hidden = false;
+            msgInput.focus();
+            ws = new WebSocket("ws://127.0.0.1:5000/ws/" + nameInput.value);
+            ws.onmessage = function(event) {
+                msgsArea.value += event.data + "\r\n";
+            }
+        });
+        
+        sendForm.addEventListener("submit", function(event) {
+            event.preventDefault();
+            ws.send(msgInput.value);
+            msgInput.value = "";
+        });
+    </script>
+    "###,
+    )
+}
+
+
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -47,6 +108,8 @@ async fn main() -> Result<(), std::io::Error> {
             "/ws",
             get(routing::ws), //.data(tokio::sync::broadcast::channel::<String>(32).0)),
         )
+        .at("/", get(index))
+        .at("/ws/:name", get(routing::ws))
         .at("/hello", get(routing::hello))
         .with(CookieJarManager::new())
         .data(connection_manager)

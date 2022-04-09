@@ -2,17 +2,28 @@ use std::time::{SystemTime, UNIX_EPOCH};
 extern crate redis;
 use redis::Commands;
 use std::sync::Arc;
+use std::collections::*;
 use parking_lot::RwLock;
+use poem::{
+    handler,
+    http::{header, StatusCode},
+    web::{
+        websocket::{Message, WebSocket},
+        Data, Json,
+    },
+    IntoResponse, Request, Response,
+};
 
 pub struct ConnectionManager {
     pub id: String,
+    pub sessions: HashMap<String, tokio::sync::watch::Sender<String>>//tokio::sync::broadcast::Sender<String>>,
     //red_client: redis::Client,
 }
 
 impl ConnectionManager {
     pub fn new(redis_host: String, redis_port: i16) -> Arc<RwLock<ConnectionManager>> {
         let red_client = redis::Client::open(format!("redis://{}:{}/", redis_host, redis_port)).unwrap();
-        let connection_manager = ConnectionManager { id: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros().to_string()};
+        let connection_manager = ConnectionManager { id: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros().to_string(), sessions: HashMap::new() };
         let connection_manager = Arc::new(RwLock::new(connection_manager));
         let connection_manager_clone = Arc::clone(&connection_manager);
         let mut red = red_client.get_connection().unwrap();

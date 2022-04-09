@@ -6,7 +6,7 @@ use poem::{
     http::{header, StatusCode},
     web::{
         websocket::{Message, WebSocket},
-        Data, Json,
+        Data, Json, Path
     },
     IntoResponse, Request, Response,
 };
@@ -188,42 +188,84 @@ pub async fn hello(
 
 #[handler]
 pub fn ws(
-    //Path(name): Path<String>,
+    Path(name): Path<String>,
     ws: WebSocket,
     req: &Request,
     connection_manager: Data<&Arc<RwLock<ConnectionManager>>>, //sender: Data<&tokio::sync::broadcast::Sender<String>>,
 ) -> impl IntoResponse {
-    //let sender = sender.clone();
-    //let mut receiver = sender.subscribe();
+    //let (tx, mut rx1) = tokio::sync::broadcast::channel::<String>(32);
+    let (tx, mut rx1) = tokio::sync::watch::channel(String::from("hello"));
 
+    let con =  Arc::clone(&connection_manager);
+    //alot of issues here
+    // find out how to save the name 
+    // check the disconnections if sender or reciever is closed
     ws.on_upgrade(move |socket| async move {
         let (mut sink, mut stream) = socket.split();
+        let sender_name = String::from(&name);
+        println!("{}: connected", sender_name);
+        let sender_name_2 = String::from(&sender_name);
+        {
+            let mut con = con.write();
+            con.sessions.insert(
+                name,
+                tx
+            );
+        }
 
         tokio::spawn(async move {
             while let Some(Ok(msg)) = stream.next().await {
-                if let Message::Text(text) = msg {
-                    if sink
-                        .send(Message::Text(format!("sent to self, {}", text)))
-                        .await
-                        .is_err()
-                    {
-                        break;
+
+                if let Message::Text(to) = msg {
+
+                    println!("should be sent: message from {} to {}",sender_name ,to);
+                    let con = con.read();
+                    if let Some(tx) = con.sessions.get(&to){
+                        
+                        tx.send(format!("message from {} to {}",sender_name ,to)).unwrap();
                     }
+                   
+                        //     break;
+                        // }
+                    //s.send(Message::Text(format!("sent to self, {}", text))).await.unwrap();
+
+
+                    //     .await
+                    // if sink
+                    //     .send(Message::Text(format!("sent to self, {}", text)))
+                    //     .await
+                    //     .is_err()
+                    // {
+                    //     break;
+                    // }
                     // if sender.send(format!("{}: {}", name, text)).is_err() {
                     //     break;
                     // }
                 }
             }
-            println!("disconnected");
+            let mut con = con.write();
+            con.sessions.remove(&sender_name);
+            println!("{}: sender disconnected", sender_name);
+
         });
 
-        // tokio::spawn(async move {
-        //     while let Ok(msg) = receiver.recv().await {
-        //         println!("2");
-        //         if sink.send(Message::Text(msg)).await.is_err() {
-        //             break;
-        //         }
-        //     }
-        // });
+        tokio::spawn(async move {
+            
+            while rx1.changed().await.is_ok() {
+
+                //println!("received = {:?}", *rx1.borrow());
+                let msg = String::from(&*rx1.borrow());
+                if sink.send(Message::Text(msg)).await.is_err() {
+                    break;
+                }
+            }
+            /*while let Some(msg) = rx1.recv().await {
+                println!("sent: {}", msg);
+                if sink.send(Message::Text(msg)).await.is_err() {
+                    break;
+                }
+            }*/
+            println!("{}: res disconnected", sender_name_2);
+        });
     })
 }
