@@ -194,7 +194,9 @@ pub fn ws(
     req: &Request,
     connection_manager: Data<&Arc<RwLock<ConnectionManager>>>, //sender: Data<&tokio::sync::broadcast::Sender<String>>,
 ) -> impl IntoResponse {
-    //let (tx, mut rx1) = tokio::sync::broadcast::channel::<String>(32);
+    //validate token
+
+
     let (tx, mut rx1) = tokio::sync::watch::channel(String::from("hello"));
 
     let con =  Arc::clone(&connection_manager);
@@ -216,14 +218,9 @@ pub fn ws(
 
                 if let Message::Text(to) = msg {
 
-                    println!("should be sent: message from {} to {}",sender_name ,to);
+                    println!("should be sent: message from {} to {}", sender_name ,to);
                     let con = con.read();
-                    if let Some(txs) = con.sessions.get(&to){
-                        for (_, tx) in txs.iter() {
-                            tx.send(format!("message from {} to {}",sender_name ,to)).unwrap();
-                        }
-                        
-                    }
+                    con.send_personal_message(&sender_name, &to, String::from("sup sup"));
                    
                         //     break;
                         // }

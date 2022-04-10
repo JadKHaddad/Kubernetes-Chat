@@ -14,9 +14,14 @@ use poem::{
     IntoResponse, Request, Response,
 };
 
+pub struct User {
+    pub positions: HashSet<usize>,
+    pub sessions: HashMap<usize,tokio::sync::watch::Sender<String>>
+}
+
 pub struct ConnectionManager {
     pub id: String,
-    pub sessions: HashMap<String, HashMap<usize,tokio::sync::watch::Sender<String>>>//tokio::sync::broadcast::Sender<String>>,
+    pub sessions: HashMap<String, User>//tokio::sync::broadcast::Sender<String>>,
     //red_client: redis::Client,
     //subscribers set
 }
@@ -45,23 +50,28 @@ impl ConnectionManager {
     }
 
     pub fn connect(&mut self, username: String, sender: tokio::sync::watch::Sender<String>/* set of subscribers*/) -> usize{
-        let pos: usize; 
+        let mut pos: usize; 
         match self.sessions.get_mut(&username) {
-            Some(sockets) => {
-                pos = sockets.len();
-                sockets.insert(pos, sender); //insert or update if key already exists the pos must be updated
+            Some(user) => {
+                pos = 0;
+                while user.positions.contains(&pos) {
+                    pos += 1;
+                }
+                user.positions.insert(pos);
+                user.sessions.insert(pos, sender);
                 //debug
-                println!("CONNECTED. username: {}, sockets: {}", &username, sockets.len());
+                println!("CONNECTED. username: {}, sockets: {}", &username, user.sessions.len());
             },
             None => {
-                
-                let mut new_sockets: HashMap<usize,tokio::sync::watch::Sender<String>> = HashMap::new();
                 pos = 0;
-                new_sockets.insert(0, sender);
+                let mut new_sessions: HashMap<usize,tokio::sync::watch::Sender<String>> = HashMap::new();
+                let mut new_positions: HashSet<usize> = HashSet::new();
+                new_positions.insert(0);
+                new_sessions.insert(0, sender);
                 //debug
-                println!("CONNECTED. username: {}, sessions: {}", &username, new_sockets.len());
+                println!("CONNECTED. username: {}, sessions: {}", &username, new_sessions.len());
                 //end debug
-                self.sessions.insert(username, new_sockets);
+                self.sessions.insert(username, User {positions: new_positions, sessions: new_sessions});
             }
         }
         // add server to user
@@ -71,14 +81,28 @@ impl ConnectionManager {
 
     pub fn disconnect(&mut self, username: String, pos: usize){
         match self.sessions.get_mut(&username) {
-            Some(sockets) => {
-                sockets.remove(&pos);
+            Some(user) => {
+                user.sessions.remove(&pos);
+                user.positions.remove(&pos);
                 //debug
-                println!("DISCONNECTED. username: {}, sessions: {}", &username, sockets.len());
+                println!("DISCONNECTED. username: {}, sessions: {}", &username,  user.sessions.len());
             },
             None => ()
         }
     }
+
+    pub fn send_personal_message(&self, username_from: &str, username_to: &str, text_content: String){
+        //create the message
+        //send to self
+
+        //send to other
+        if let Some(user) = self.sessions.get(username_to){
+            for (_, tx) in user.sessions.iter() {
+                tx.send(String::from(&text_content)).unwrap();
+            }
+        }
+    }
+
 
     // pub fn a(m: Arc<RwLock<ConnectionManager>>){
     //     let mm = m.read();

@@ -32,3 +32,20 @@ pub async fn create_session(
         .await?;
     return Ok(result);
 }
+
+pub async fn validate_token(token: &str, sessoins_collection: &Collection<Document>) -> Result<(Option<String>, String), MongoError> {
+    let mut username: Option<String> = None;
+    let mut message: String = String::from("no token");
+    let result = sessoins_collection
+        .find_one(doc! {"token": token}, None)
+        .await?;
+    match result {
+        Some(doc) => {
+            username = Some(doc.get_str("username").unwrap().to_string());
+        }
+        None => {
+            message = String::from("token is no valid");
+        }
+    }
+    return Ok((username, message));
+}
