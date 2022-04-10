@@ -24,8 +24,8 @@ pub async fn create_session(
     let result = sessoins_collection
         .insert_one(
             doc! {
-                "token": username,
-                "username": token,
+                "token": token,
+                "username": username,
             },
             None,
         )
