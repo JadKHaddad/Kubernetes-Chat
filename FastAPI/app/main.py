@@ -41,7 +41,7 @@ def validate_token(token):
             username = user["username"]
             message = "success"
         else:
-            message = "token is no valid"
+            message = "token is not valid"
     return username, message
 
 

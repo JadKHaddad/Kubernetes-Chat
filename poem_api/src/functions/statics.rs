@@ -44,7 +44,7 @@ pub async fn validate_token(token: &str, sessoins_collection: &Collection<Docume
             username = Some(doc.get_str("username").unwrap().to_string());
         }
         None => {
-            message = String::from("token is no valid");
+            message = String::from("token is not valid");
         }
     }
     return Ok((username, message));
