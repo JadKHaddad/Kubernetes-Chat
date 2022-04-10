@@ -49,7 +49,7 @@ impl ConnectionManager {
         match self.sessions.get_mut(&username) {
             Some(sockets) => {
                 pos = sockets.len();
-                sockets.insert(pos, sender);
+                sockets.insert(pos, sender); //insert or update if key already exists the pos must be updated
                 //debug
                 println!("CONNECTED. username: {}, sockets: {}", &username, sockets.len());
             },
