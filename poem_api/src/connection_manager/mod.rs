@@ -16,8 +16,9 @@ use poem::{
 
 pub struct ConnectionManager {
     pub id: String,
-    pub sessions: HashMap<String, tokio::sync::watch::Sender<String>>//tokio::sync::broadcast::Sender<String>>,
+    pub sessions: HashMap<String, HashMap<usize,tokio::sync::watch::Sender<String>>>//tokio::sync::broadcast::Sender<String>>,
     //red_client: redis::Client,
+    //subscribers set
 }
 
 impl ConnectionManager {
@@ -41,6 +42,42 @@ impl ConnectionManager {
             }
         });
         connection_manager_clone
+    }
+
+    pub fn connect(&mut self, username: String, sender: tokio::sync::watch::Sender<String>/* set of subscribers*/) -> usize{
+        let pos: usize; 
+        match self.sessions.get_mut(&username) {
+            Some(sockets) => {
+                pos = sockets.len();
+                sockets.insert(pos, sender);
+                //debug
+                println!("CONNECTED. username: {}, sockets: {}", &username, sockets.len());
+            },
+            None => {
+                
+                let mut new_sockets: HashMap<usize,tokio::sync::watch::Sender<String>> = HashMap::new();
+                pos = 0;
+                new_sockets.insert(0, sender);
+                //debug
+                println!("CONNECTED. username: {}, sessions: {}", &username, new_sockets.len());
+                //end debug
+                self.sessions.insert(username, new_sockets);
+            }
+        }
+        // add server to user
+        // notify subs
+        return pos;
+    }
+
+    pub fn disconnect(&mut self, username: String, pos: usize){
+        match self.sessions.get_mut(&username) {
+            Some(sockets) => {
+                sockets.remove(&pos);
+                //debug
+                println!("DISCONNECTED. username: {}, sessions: {}", &username, sockets.len());
+            },
+            None => ()
+        }
     }
 
     // pub fn a(m: Arc<RwLock<ConnectionManager>>){

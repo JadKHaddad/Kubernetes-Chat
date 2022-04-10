@@ -10,6 +10,7 @@ use poem::{
     },
     IntoResponse, Request, Response,
 };
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -203,14 +204,11 @@ pub fn ws(
     ws.on_upgrade(move |socket| async move {
         let (mut sink, mut stream) = socket.split();
         let sender_name = String::from(&name);
-        println!("{}: connected", sender_name);
         let sender_name_2 = String::from(&sender_name);
+        let socket_posistion: usize;
         {
             let mut con = con.write();
-            con.sessions.insert(
-                name,
-                tx
-            );
+            socket_posistion = con.connect(name, tx);
         }
 
         tokio::spawn(async move {
@@ -220,9 +218,11 @@ pub fn ws(
 
                     println!("should be sent: message from {} to {}",sender_name ,to);
                     let con = con.read();
-                    if let Some(tx) = con.sessions.get(&to){
+                    if let Some(txs) = con.sessions.get(&to){
+                        for (_, tx) in txs.iter() {
+                            tx.send(format!("message from {} to {}",sender_name ,to)).unwrap();
+                        }
                         
-                        tx.send(format!("message from {} to {}",sender_name ,to)).unwrap();
                     }
                    
                         //     break;
@@ -244,13 +244,13 @@ pub fn ws(
                 }
             }
             let mut con = con.write();
-            con.sessions.remove(&sender_name);
-            println!("{}: sender disconnected", sender_name);
+            con.disconnect(sender_name, socket_posistion);
+            //con.sessions.remove(&sender_name);
+            //println!("{}: sender disconnected", sender_name);
 
         });
 
         tokio::spawn(async move {
-            
             while rx1.changed().await.is_ok() {
 
                 //println!("received = {:?}", *rx1.borrow());
@@ -265,7 +265,7 @@ pub fn ws(
                     break;
                 }
             }*/
-            println!("{}: res disconnected", sender_name_2);
+            println!("ONE RES DISCONNECTED: {}", sender_name_2);
         });
     })
 }
