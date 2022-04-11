@@ -23,9 +23,9 @@ pub struct SignoutModel {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IsSignedinModel {
-    success: bool,
-    username: String,
-    message: String
+    pub success: bool,
+    pub username: Option<String>,
+    pub message: String
 }
 
 #[derive(Debug, Serialize, Deserialize)]

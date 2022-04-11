@@ -109,14 +109,13 @@ async fn main() -> Result<(), std::io::Error> {
             get(routing::ws), //.data(tokio::sync::broadcast::channel::<String>(32).0)),
         )
         .at("/", get(index))
-        .at("/ws/:name", get(routing::ws))
         .at("/hello", get(routing::hello))
         .with(CookieJarManager::new())
         .data(connection_manager)
         .data(auth)
         .data(collections);
 
-    Server::new(TcpListener::bind("127.0.0.1:5000"))
+    Server::new(TcpListener::bind("0.0.0.0:5000"))
         .run(app)
         .await
 }

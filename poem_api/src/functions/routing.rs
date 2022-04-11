@@ -5,8 +5,8 @@ use poem::{
     handler,
     http::{header, StatusCode},
     web::{
-        websocket::{Message, WebSocket},
-        Data, Json, Path
+        websocket::{CloseCode, Message, WebSocket},
+        Data, Json, Path,
     },
     IntoResponse, Request, Response,
 };
@@ -133,6 +133,11 @@ pub async fn signin(
         .unwrap();
     response.username = res.get_str("username").unwrap().to_string();
     response.info.contacts = Some(res.get_array("contacts").unwrap());
+    //create token and session
+    let token = statics::create_token();
+    let _ = statics::create_session(&response.username, &token, &collections.sessions_collection)
+        .await
+        .unwrap();
     //statics::get_user_info(&req.email, &collections.users_collection).await;
     return builder.body(serde_json::to_string(&response).unwrap());
 }
@@ -141,7 +146,36 @@ pub async fn signin(
 pub async fn signout(req: &Request, auth: Data<&fireauth::FireAuth>) {}
 
 #[handler]
-pub async fn is_signedin(req: &Request, auth: Data<&fireauth::FireAuth>) {}
+pub async fn is_signedin(
+    req: &Request,
+    collections: Data<&mongodb_models::Collections>,
+) -> Response {
+    let mut builder = Response::builder()
+        .header(header::CONTENT_TYPE, "application/json")
+        .status(StatusCode::OK);
+    let mut response = response_models::IsSignedinModel {
+        success: false,
+        username: None,
+        message: String::from("no token"),
+    };
+
+    if let Some(token_value) = req.cookie().get("token") {
+        match statics::validate_token(token_value.value_str(), &collections.sessions_collection)
+            .await
+        {
+            Ok((username, message)) => {
+                response.success = true;
+                response.username = username;
+                response.message = message;
+            }
+            Err(error) => {
+                // connection error
+                println!("{:?}", error);
+            }
+        };
+    }
+    return builder.body(serde_json::to_string(&response).unwrap());
+}
 
 #[handler]
 pub async fn add_contact(req: &Request, auth: Data<&fireauth::FireAuth>) {}
@@ -187,45 +221,59 @@ pub async fn hello(
     return builder.body("ok");
 }
 
+struct Hello(Option<String>);
+
+impl IntoResponse for Hello {
+    fn into_response(self) -> Response {
+        let msg = match self.0 {
+            Some(name) => format!("hello {}", name),
+            None => format!("hello"),
+        };
+        msg.into_response()
+    }
+}
+
 #[handler]
 pub fn ws(
-    Path(name): Path<String>,
     ws: WebSocket,
     req: &Request,
     connection_manager: Data<&Arc<RwLock<ConnectionManager>>>, //sender: Data<&tokio::sync::broadcast::Sender<String>>,
 ) -> impl IntoResponse {
     //validate token
+    let username = String::from("hahaha");
+    if let None = req.cookie().get("token") {}
+    // cant get ws to disconnect
+
+
 
 
     let (tx, mut rx1) = tokio::sync::watch::channel(String::from("hello"));
+    let con = Arc::clone(&connection_manager);
 
-    let con =  Arc::clone(&connection_manager);
     //alot of issues here
-    // find out how to save the name 
+    // find out how to save the name
     // check the disconnections if sender or reciever is closed
-    ws.on_upgrade(move |socket| async move {
+    return ws.on_upgrade(move |socket| async move {
         let (mut sink, mut stream) = socket.split();
-        let sender_name = String::from(&name);
-        let sender_name_2 = String::from(&sender_name);
+
+        let sender_username = String::from(&username);
+        let sender_username_2 = String::from(&sender_username);
         let socket_posistion: usize;
         {
             let mut con = con.write();
-            socket_posistion = con.connect(name, tx);
+            socket_posistion = con.connect(username, tx);
         }
 
         tokio::spawn(async move {
             while let Some(Ok(msg)) = stream.next().await {
+                if let Message::Text(rec) = msg {
+                    println!("from: {}, {}", sender_username, rec);
+                    //let con = con.read();
+                    //con.send_personal_message(&sender_username, &to, String::from("sup sup"));
 
-                if let Message::Text(to) = msg {
-
-                    println!("should be sent: message from {} to {}", sender_name ,to);
-                    let con = con.read();
-                    con.send_personal_message(&sender_name, &to, String::from("sup sup"));
-                   
-                        //     break;
-                        // }
+                    //     break;
+                    // }
                     //s.send(Message::Text(format!("sent to self, {}", text))).await.unwrap();
-
 
                     //     .await
                     // if sink
@@ -241,15 +289,13 @@ pub fn ws(
                 }
             }
             let mut con = con.write();
-            con.disconnect(sender_name, socket_posistion);
+            con.disconnect(sender_username, socket_posistion);
             //con.sessions.remove(&sender_name);
             //println!("{}: sender disconnected", sender_name);
-
         });
 
         tokio::spawn(async move {
             while rx1.changed().await.is_ok() {
-
                 //println!("received = {:?}", *rx1.borrow());
                 let msg = String::from(&*rx1.borrow());
                 if sink.send(Message::Text(msg)).await.is_err() {
@@ -262,7 +308,7 @@ pub fn ws(
                     break;
                 }
             }*/
-            println!("ONE RES DISCONNECTED: {}", sender_name_2);
+            println!("ONE RES DISCONNECTED: {}", sender_username_2);
         });
-    })
+    });
 }
