@@ -9,20 +9,11 @@ use poem::{
     Server,
 };
 
-use poem::{
-    handler,
-    http::{header, StatusCode},
-    web::{
-        websocket::{Message, WebSocket},
-        Data, Json, Html
-    },
-    IntoResponse, Request, Response,
-};
+use poem::{handler, web::Html};
 
 use crate::connection_manager::ConnectionManager;
 use crate::functions::routing;
 use crate::models::*;
-
 
 #[handler]
 fn index() -> Html<&'static str> {
@@ -71,8 +62,6 @@ fn index() -> Html<&'static str> {
     "###,
     )
 }
-
-
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {

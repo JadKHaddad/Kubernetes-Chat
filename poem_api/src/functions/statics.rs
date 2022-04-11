@@ -1,4 +1,3 @@
-use crate::models::UserInfo;
 use mongodb::{
     bson::{doc, Document},
     error::Error as MongoError,
@@ -33,7 +32,10 @@ pub async fn create_session(
     return Ok(result);
 }
 
-pub async fn validate_token(token: &str, sessoins_collection: &Collection<Document>) -> Result<(Option<String>, String), MongoError> {
+pub async fn validate_token(
+    token: &str,
+    sessoins_collection: &Collection<Document>,
+) -> Result<(Option<String>, String), MongoError> {
     let mut username: Option<String> = None;
     let mut message: String = String::from("no token");
     let result = sessoins_collection

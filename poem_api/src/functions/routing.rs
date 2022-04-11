@@ -5,18 +5,18 @@ use poem::{
     handler,
     http::{header, StatusCode},
     web::{
-        websocket::{CloseCode, Message, WebSocket},
-        Data, Json, Path,
+        websocket::{Message, WebSocket},
+        Data, Json,
     },
     IntoResponse, Request, Response,
 };
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::connection_manager::ConnectionManager;
 use crate::functions::statics;
 use crate::models::*;
+//use crate::c_websocket::WebSocket;
 
 #[handler]
 pub async fn signup(
@@ -221,39 +221,43 @@ pub async fn hello(
     return builder.body("ok");
 }
 
-struct Hello(Option<String>);
-
-impl IntoResponse for Hello {
-    fn into_response(self) -> Response {
-        let msg = match self.0 {
-            Some(name) => format!("hello {}", name),
-            None => format!("hello"),
-        };
-        msg.into_response()
-    }
-}
-
 #[handler]
-pub fn ws(
+pub async fn ws(
     ws: WebSocket,
     req: &Request,
-    connection_manager: Data<&Arc<RwLock<ConnectionManager>>>, //sender: Data<&tokio::sync::broadcast::Sender<String>>,
+    connection_manager: Data<&Arc<RwLock<ConnectionManager>>>,
+    collections: Data<&mongodb_models::Collections>, //sender: Data<&tokio::sync::broadcast::Sender<String>>,
 ) -> impl IntoResponse {
     //validate token
-    let username = String::from("hahaha");
-    if let None = req.cookie().get("token") {}
-    // cant get ws to disconnect
+    let mut username = String::new();
 
+    let mut break_connection = false;
+    if let Some(token_value) = req.cookie().get("token") {
+        let (username_result, _) =
+            statics::validate_token(token_value.value_str(), &collections.sessions_collection)
+                .await
+                .unwrap();
+        if let Some(username_result) = username_result {
+            username = username_result;
+        } else {
+            println!(
+                "WEBSOCKET: UNAUTHORIZED TOKEN | {}",
+                token_value.value_str()
+            );
+            break_connection = true;
+        }
+    } else {
+        println!("WEBSOCKET: UNAUTHORIZED | {:?}", req);
+        break_connection = true;
+    }
 
-
-
-    let (tx, mut rx1) = tokio::sync::watch::channel(String::from("hello"));
     let con = Arc::clone(&connection_manager);
 
-    //alot of issues here
-    // find out how to save the name
-    // check the disconnections if sender or reciever is closed
-    return ws.on_upgrade(move |socket| async move {
+    ws.on_upgrade(move |socket| async move {
+        if break_connection {
+            return;
+        }
+        let (tx, mut rx1) = tokio::sync::watch::channel(String::from("hello"));
         let (mut sink, mut stream) = socket.split();
 
         let sender_username = String::from(&username);
@@ -267,31 +271,12 @@ pub fn ws(
         tokio::spawn(async move {
             while let Some(Ok(msg)) = stream.next().await {
                 if let Message::Text(rec) = msg {
+                    // create the ws incoming msg struct and match types
                     println!("from: {}, {}", sender_username, rec);
-                    //let con = con.read();
-                    //con.send_personal_message(&sender_username, &to, String::from("sup sup"));
-
-                    //     break;
-                    // }
-                    //s.send(Message::Text(format!("sent to self, {}", text))).await.unwrap();
-
-                    //     .await
-                    // if sink
-                    //     .send(Message::Text(format!("sent to self, {}", text)))
-                    //     .await
-                    //     .is_err()
-                    // {
-                    //     break;
-                    // }
-                    // if sender.send(format!("{}: {}", name, text)).is_err() {
-                    //     break;
-                    // }
                 }
             }
             let mut con = con.write();
             con.disconnect(sender_username, socket_posistion);
-            //con.sessions.remove(&sender_name);
-            //println!("{}: sender disconnected", sender_name);
         });
 
         tokio::spawn(async move {
@@ -302,13 +287,7 @@ pub fn ws(
                     break;
                 }
             }
-            /*while let Some(msg) = rx1.recv().await {
-                println!("sent: {}", msg);
-                if sink.send(Message::Text(msg)).await.is_err() {
-                    break;
-                }
-            }*/
             println!("ONE RES DISCONNECTED: {}", sender_username_2);
         });
-    });
+    })
 }
