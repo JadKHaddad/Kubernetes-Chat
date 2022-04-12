@@ -1,5 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 extern crate redis;
+use crate::models::ws_models;
 use parking_lot::RwLock;
 use redis::Commands;
 use std::collections::*;
@@ -115,17 +116,58 @@ impl ConnectionManager {
         &self,
         username_from: &str,
         username_to: &str,
-        text_content: String,
+        text_content: &str,
     ) {
-        //create the message
         //send to self
-
-        //send to other
-        if let Some(user) = self.sessions.get(username_to) {
+        let message_id = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            .to_string();
+        let self_message = ws_models::Message {
+            event_type: "msg",
+            event_content: ws_models::EventContent {
+                username_target: username_to,
+                message_content: ws_models::MessageContent {
+                    r#type: "txt",
+                    text_content: text_content,
+                    date: "", // todo
+                    id: &message_id,
+                    received: false,
+                },
+            },
+        };
+        if let Some(user) = self.sessions.get(username_from) {
             for (_, tx) in user.sessions.iter() {
-                tx.send(String::from(&text_content)).unwrap();
+                tx.send(String::from(serde_json::to_string(&self_message).unwrap()))
+                    .unwrap();
             }
         }
+        //notify!
+
+        //send to other
+        let others_message = ws_models::Message {
+            event_type: "msg",
+            event_content: ws_models::EventContent {
+                username_target: username_from,
+                message_content: ws_models::MessageContent {
+                    r#type: "txt",
+                    text_content: text_content,
+                    date: "",
+                    id: &message_id,
+                    received: true,
+                },
+            },
+        };
+        if let Some(user) = self.sessions.get(username_to) {
+            for (_, tx) in user.sessions.iter() {
+                tx.send(String::from(
+                    serde_json::to_string(&others_message).unwrap(),
+                ))
+                .unwrap();
+            }
+        }
+        //notify!
     }
 
     // pub fn a(m: Arc<RwLock<ConnectionManager>>){
@@ -166,7 +208,6 @@ impl ConnectionManager {
     //     });
 
     // }
-    
     fn write_id_in_redis(&self, red: &mut redis::Connection) {
         let _: () = red.set("id", &self.id).unwrap();
     }

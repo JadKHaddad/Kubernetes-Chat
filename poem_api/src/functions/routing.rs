@@ -272,7 +272,28 @@ pub async fn ws(
             while let Some(Ok(msg)) = stream.next().await {
                 if let Message::Text(rec) = msg {
                     // create the ws incoming msg struct and match types
-                    println!("from: {}, {}", sender_username, rec);
+                    println!("from: {} | {}", sender_username, rec);
+                    let incoming_msg: ws_models::WSIncomming = serde_json::from_str(&rec).unwrap();
+                    let con = con.read();
+                    match incoming_msg.r#type {
+                        "typing" => {
+                            //todo
+                        }
+                        "txt" => {
+                            let username_to = incoming_msg.username_to.unwrap();
+                            let text_content = incoming_msg.text_content.unwrap();
+                            con.send_personal_message(&sender_username, username_to, text_content);
+                        }
+                        "like" => {
+                            //todo
+                        }
+                        "status_request" => {
+                            //todo
+                        }
+                        _ => {
+                            println!("WEBSOCKET: UNKNOWN TYPE | {}", incoming_msg.r#type);
+                        }
+                    }
                 }
             }
             let mut con = con.write();

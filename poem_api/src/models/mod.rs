@@ -1,6 +1,7 @@
 pub mod mongodb_models;
 pub mod request_models;
 pub mod response_models;
+pub mod ws_models;
 
 use serde::Serialize;
 
