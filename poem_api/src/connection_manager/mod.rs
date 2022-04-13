@@ -137,12 +137,10 @@ impl ConnectionManager {
                 },
             },
         };
-        if let Some(user) = self.sessions.get(username_from) {
-            for (_, tx) in user.sessions.iter() {
-                tx.send(String::from(serde_json::to_string(&self_message).unwrap()))
-                    .unwrap();
-            }
-        }
+        self.send(
+            username_from,
+            &serde_json::to_string(&self_message).unwrap(),
+        );
         //notify!
 
         //send to other
@@ -159,15 +157,30 @@ impl ConnectionManager {
                 },
             },
         };
+        self.send(
+            username_to,
+            &serde_json::to_string(&others_message).unwrap(),
+        );
+        //notify!
+    }
+
+    pub fn send_personal_typing(&self, username_from: &str, username_to: &str) {
+        let typing_message = ws_models::TypingMessage {
+            event_type: "typing",
+            username_target: username_from,
+        };
+        self.send(
+            username_to,
+            &serde_json::to_string(&typing_message).unwrap(),
+        );
+    }
+
+    fn send(&self, username_to: &str, content: &str) {
         if let Some(user) = self.sessions.get(username_to) {
             for (_, tx) in user.sessions.iter() {
-                tx.send(String::from(
-                    serde_json::to_string(&others_message).unwrap(),
-                ))
-                .unwrap();
+                tx.send(String::from(content)).unwrap();
             }
         }
-        //notify!
     }
 
     // pub fn a(m: Arc<RwLock<ConnectionManager>>){

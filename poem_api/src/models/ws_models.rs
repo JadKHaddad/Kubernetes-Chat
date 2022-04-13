@@ -30,3 +30,9 @@ pub struct MessageContent<'a> {
     pub id: &'a str,
     pub received: bool,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TypingMessage<'a> {
+    pub event_type: &'a str,
+    pub username_target: &'a str,
+}

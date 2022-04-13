@@ -277,7 +277,8 @@ pub async fn ws(
                     let con = con.read();
                     match incoming_msg.r#type {
                         "typing" => {
-                            //todo
+                            let username_to = incoming_msg.username_to.unwrap();
+                            con.send_personal_typing(&sender_username, username_to);
                         }
                         "txt" => {
                             let username_to = incoming_msg.username_to.unwrap();
