@@ -9,6 +9,7 @@ use std::sync::Arc;
 pub struct User {
     pub positions: HashSet<usize>,
     pub sessions: HashMap<usize, tokio::sync::watch::Sender<String>>,
+    pub subscribers: HashSet<String>,
 }
 
 pub struct ConnectionManager {
@@ -87,6 +88,7 @@ impl ConnectionManager {
                     User {
                         positions: new_positions,
                         sessions: new_sessions,
+                        subscribers: HashSet::new(),
                     },
                 );
             }
@@ -181,6 +183,13 @@ impl ConnectionManager {
                 tx.send(String::from(content)).unwrap();
             }
         }
+    }
+
+    pub fn add_to_subscribers(&mut self, subscriber:  String, username_to:  &str){
+        if let Some(user) = self.sessions.get_mut(username_to) {
+            user.subscribers.insert(subscriber);
+        }
+        //notify
     }
 
     // pub fn a(m: Arc<RwLock<ConnectionManager>>){

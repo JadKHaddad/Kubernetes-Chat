@@ -30,6 +30,6 @@ pub struct IsSignedinModel {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AddContactModel {
-    success: bool,
-    message: String,
+    pub success: bool,
+    pub message: String,
 }

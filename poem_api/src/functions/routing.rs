@@ -138,8 +138,13 @@ pub async fn signin(
     let _ = statics::create_session(&response.username, &token, &collections.sessions_collection)
         .await
         .unwrap();
-    //statics::get_user_info(&req.email, &collections.users_collection).await;
-    return builder.body(serde_json::to_string(&response).unwrap());
+
+    return builder
+        .header(
+            "Set-Cookie",
+            format!("token={}; SameSite=lax; path=/", token), // todo: cookie life
+        )
+        .body(serde_json::to_string(&response).unwrap());
 }
 
 #[handler]
@@ -178,7 +183,77 @@ pub async fn is_signedin(
 }
 
 #[handler]
-pub async fn add_contact(req: &Request, auth: Data<&fireauth::FireAuth>) {}
+pub async fn add_contact(
+    req: &Request,
+    req_body: Json<request_models::AddContactModel>,
+    connection_manager: Data<&Arc<RwLock<ConnectionManager>>>,
+    collections: Data<&mongodb_models::Collections>,
+) -> Response {
+    let mut builder = Response::builder()
+        .header(header::CONTENT_TYPE, "application/json")
+        .status(StatusCode::OK);
+    let mut response = response_models::AddContactModel {
+        success: false,
+        message: String::new(),
+    };
+    if let Some(token_value) = req.cookie().get("token") {
+        let (username_result, message) =
+            statics::validate_token(token_value.value_str(), &collections.sessions_collection)
+                .await
+                .unwrap();
+        response.message = message;
+        if let Some(username_result) = username_result {
+            let username_from = username_result;
+            let username_to = &req_body.username;
+            //check if username exists
+            match collections
+                .users_collection
+                .find_one(doc! { "username": username_to }, None)
+                .await
+                .unwrap()
+            {
+                Some(_) => {
+                    //add user to contacts
+                    collections
+                        .users_collection
+                        .update_one(
+                            doc! { "username": &username_from },
+                            doc! {
+                                "$addToSet": {
+                                    "contacts": username_to
+                                }
+                            },
+                            None,
+                        )
+                        .await
+                        .unwrap();
+                    //add username_from to subscribers of username_to
+                    collections
+                        .users_collection
+                        .update_one(
+                            doc! { "username": &username_to },
+                            doc! {
+                                "$addToSet": {
+                                    "subscribers": &username_from
+                                }
+                            },
+                            None,
+                        )
+                        .await
+                        .unwrap();
+                    //manager add to subscribers of username_from
+                    let mut con = connection_manager.write();
+                    con.add_to_subscribers(username_from, username_to);
+                    response.success = true;
+                }
+                None => {
+                    response.message = String::from("username does not exist");
+                }
+            }
+        }
+    }
+    return builder.body(serde_json::to_string(&response).unwrap());
+}
 
 #[handler]
 pub async fn hello(

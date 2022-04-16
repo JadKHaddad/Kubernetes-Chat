@@ -12,3 +12,8 @@ pub struct SigninModel {
     pub email: String,
     pub password: String,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct AddContactModel {
+    pub username: String,
+}
