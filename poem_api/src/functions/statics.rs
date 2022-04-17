@@ -5,6 +5,8 @@ use mongodb::{
     Collection,
 };
 use rand::{distributions::Alphanumeric, Rng};
+use std::collections::HashSet;
+//use crate::models::mongodb_models::MongoUser;
 
 pub fn create_token() -> String {
     let token: String = rand::thread_rng()
@@ -51,3 +53,19 @@ pub async fn validate_token(
     }
     return Ok((username, message));
 }
+
+pub async fn get_subscribers(
+    username: &str,
+    users_collection: &Collection<Document>,
+) -> Result<Option<HashSet<String>>, Box<dyn std::error::Error>> {
+    let result = users_collection
+        .find_one(doc! {"username": username}, None)
+        .await?;
+    if let Some(doc) = result {
+        let vec: HashSet<String> = doc.get_array("subscribers").unwrap().iter().map(|x| x.as_str().unwrap().to_owned()).collect();
+        return Ok(Some(vec));
+    }
+    Ok(None)
+}
+
+

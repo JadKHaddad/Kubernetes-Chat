@@ -12,7 +12,7 @@ use poem::{
 };
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
-
+use std::collections::HashSet;
 use crate::connection_manager::ConnectionManager;
 use crate::functions::statics;
 use crate::models::*;
@@ -305,7 +305,7 @@ pub async fn ws(
 ) -> impl IntoResponse {
     //validate token
     let mut username = String::new();
-
+    let mut subscribers: HashSet<String> = HashSet::new();
     let mut break_connection = false;
     if let Some(token_value) = req.cookie().get("token") {
         let (username_result, _) =
@@ -314,6 +314,10 @@ pub async fn ws(
                 .unwrap();
         if let Some(username_result) = username_result {
             username = username_result;
+            if let Some(set) = statics::get_subscribers(&username, &collections.users_collection).await.unwrap(){
+                subscribers = set;
+            }
+
         } else {
             println!(
                 "WEBSOCKET: UNAUTHORIZED TOKEN | {}",
@@ -340,7 +344,7 @@ pub async fn ws(
         let socket_posistion: usize;
         {
             let mut con = con.write();
-            socket_posistion = con.connect(username, tx);
+            socket_posistion = con.connect(username, subscribers, tx);
         }
 
         tokio::spawn(async move {

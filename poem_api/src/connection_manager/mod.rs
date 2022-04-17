@@ -51,7 +51,8 @@ impl ConnectionManager {
     pub fn connect(
         &mut self,
         username: String,
-        sender: tokio::sync::watch::Sender<String>, /* set of subscribers*/
+        subscribers:  HashSet<String>,
+        sender: tokio::sync::watch::Sender<String>,
     ) -> usize {
         let mut pos: usize;
         match self.sessions.get_mut(&username) {
@@ -88,7 +89,7 @@ impl ConnectionManager {
                     User {
                         positions: new_positions,
                         sessions: new_sessions,
-                        subscribers: HashSet::new(),
+                        subscribers: subscribers,
                     },
                 );
             }
